@@ -95,13 +95,14 @@ module Houston
     end
 
     def devices
-      open_connection
       devices = []
 
-      while line = @connection.read(38)
-        feedback = line.unpack('N1n1H140')
-        token = feedback[2].scan(/.{0,8}/).join(' ').strip
-        devices << token if token
+      Connection.open(@feedback_uri, @certificate, @passphrase) do |connection|
+        while line = connection.read(38)
+          feedback = line.unpack('N1n1H140')
+          token = feedback[2].scan(/.{0,8}/).join(' ').strip
+          devices << token if token
+        end
       end
 
       devices
