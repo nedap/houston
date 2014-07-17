@@ -33,13 +33,12 @@ describe Houston::Client do
     client.timeout.must_equal @default_opts[:timeout]
   end
 
-  specify '#session uses a persistent connection for multiple calls to #push, #devices' do
+  specify '#session uses a persistent connection for multiple calls to #push' do
     socket = MiniTest::Mock.new
     ssl = MiniTest::Mock.new
     ssl.expect(:sync=, true, [true])
     ssl.expect(:connect, true)
     ssl.expect(:close, nil)
-    ssl.expect(:read, nil, [38])
     4.times { socket.expect(:nil?, false) }
     socket.expect(:close, nil)
 
@@ -49,7 +48,6 @@ describe Houston::Client do
         client.session do |session|
           session.push(Object.new)
           session.push(Object.new)
-          session.devices
         end
       end
     end
@@ -57,18 +55,25 @@ describe Houston::Client do
     ssl.verify
   end
 
-  specify '#devices opens a session if none is active' do
+  specify '#devices opens a feedback channel socket' do
     socket = MiniTest::Mock.new
+    socket.expect(:call, socket, ["feedback.sandbox.push.apple.com", 2196])
+    socket.expect(:close, nil)
+    4.times { socket.expect(:nil?, false) }
+
     ssl = MiniTest::Mock.new
     ssl.expect(:sync=, true, [true])
     ssl.expect(:connect, true)
     ssl.expect(:read, nil, [38])
+    ssl.expect(:close, nil)
+    
+    client = Houston::Client.development certificate: fixture('cert.pem'), passphrase: 'example'
     TCPSocket.stub(:new, socket) do
-      client = Houston::Client.development certificate: fixture('cert.pem'), passphrase: 'example'
       OpenSSL::SSL::SSLSocket.stub(:new, ssl) do
         client.devices
       end
     end
+
     socket.verify
     ssl.verify
   end
